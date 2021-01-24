@@ -22,7 +22,7 @@ int serverPort = 5000;
 
 EthernetClient tcpClient;
 
-const unsigned short gpsBufferSize = 200;
+const unsigned short gpsBufferSize = 512;
 char gpsBuffer[gpsBufferSize];
 unsigned short receivedCharCount = 0;
 
@@ -85,16 +85,16 @@ void loop() {
   // Displays information when new sentence is available.
   receivedCharCount = 0;
   while (gpsSerial.available() > 0) {
-    gpsBuffer[++receivedCharCount] = gpsSerial.read();
+    gpsBuffer[receivedCharCount++] = gpsSerial.read();
   }
   
   if (receivedCharCount > 0) {
     if (tcpClient.connected()) {
-      tcpClient.write(gpsBuffer, receivedCharCount);
+      tcpClient.write(gpsBuffer, receivedCharCount-1);
     }
     else 
     {
-      Serial.write(gpsBuffer, receivedCharCount);
+      Serial.write(gpsBuffer, receivedCharCount-1);
       Serial.println();
       connectToServer();
     }
