@@ -1,17 +1,3 @@
-/*
-  DHCP-based IP printer
-  This sketch uses the DHCP extensions to the Ethernet library
-  to get an IP address via DHCP and print the address obtained.
-  using an Arduino Wiznet Ethernet shield.
-  Circuit:
-   Ethernet shield attached to pins 10, 11, 12, 13
-  created 12 April 2011
-  modified 9 Apr 2012
-  by Tom Igoe
-  modified 02 Sept 2015
-  by Arturo Guadalupi
- */
-
 #include <SPI.h>
 #include <Ethernet.h>
 #include <SoftwareSerial.h>
@@ -31,6 +17,14 @@ SoftwareSerial gpsSerial(RXPin, TXPin);
 byte mac[] = {
   0x00, 0xAA, 0xBB, 0xCC, 0xDE, 0x02
 };
+byte server[] = {192, 168, 83, 13};
+int serverPort = 5000;
+
+EthernetClient tcpClient;
+
+const unsigned short gpsBufferSize = 200;
+char gpsBuffer[gpsBufferSize];
+unsigned short receivedCharCount = 0;
 
 void setup() {
   // You can use Ethernet.init(pin) to configure the CS pin
@@ -46,12 +40,12 @@ void setup() {
 
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
+  //while (!Serial) {
+    //; // wait for serial port to connect. Needed for native USB port only
+  //}
 
   // start the Ethernet connection:
-  Serial.println("Initialize Ethernet with DHCP:");
+  //Serial.println("Initialize Ethernet with DHCP:");
   if (Ethernet.begin(mac) == 0) {
     Serial.println("Failed to configure Ethernet using DHCP");
     if (Ethernet.hardwareStatus() == EthernetNoHardware) {
@@ -67,12 +61,43 @@ void setup() {
   // print your local IP address:
   Serial.print("My IP address: ");
   Serial.println(Ethernet.localIP());
+
+  Serial.println("connecting...");
+  
+  if (tcpClient.connect(server, serverPort)) {
+    Serial.println("connected");
+  } else {
+    Serial.println("connection failed!");
+  }
+
+  memset(gpsBuffer, 0, gpsBufferSize);
+}
+
+bool connectToServer() {
+  if (tcpClient.connect(server, serverPort)) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void loop() {
   // Displays information when new sentence is available.
+  receivedCharCount = 0;
   while (gpsSerial.available() > 0) {
-    Serial.write(gpsSerial.read()); 
+    gpsBuffer[++receivedCharCount] = gpsSerial.read();
+  }
+  
+  if (receivedCharCount > 0) {
+    if (tcpClient.connected()) {
+      tcpClient.write(gpsBuffer, receivedCharCount);
+    }
+    else 
+    {
+      Serial.write(gpsBuffer, receivedCharCount);
+      Serial.println();
+      connectToServer();
+    }
   }
 
   switch (Ethernet.maintain()) {
