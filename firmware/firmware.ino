@@ -17,7 +17,7 @@ SoftwareSerial gpsSerial(RXPin, TXPin);
 byte mac[] = {
   0x00, 0xAA, 0xBB, 0xCC, 0xDE, 0x02
 };
-byte server[] = {192, 168, 83, 13};
+byte server[] = {192, 168, 83, 150};
 int serverPort = 5000;
 
 EthernetClient tcpClient;
