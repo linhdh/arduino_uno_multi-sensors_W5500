@@ -25,6 +25,8 @@ EthernetClient tcpClient;
 const unsigned short gpsBufferSize = 512;
 char gpsBuffer[gpsBufferSize];
 unsigned short receivedCharCount = 0;
+char last_char = '\0';
+char curr_char = '\0';
 
 void setup() {
   // You can use Ethernet.init(pin) to configure the CS pin
@@ -83,21 +85,22 @@ bool connectToServer() {
 
 void loop() {
   // Displays information when new sentence is available.
-  receivedCharCount = 0;
   while (gpsSerial.available() > 0) {
-    gpsBuffer[receivedCharCount++] = gpsSerial.read();
+    curr_char = gpsSerial.read();
+    gpsBuffer[receivedCharCount++] = curr_char;
+    if (receivedCharCount > 0 && last_char == '\r' && curr_char == '\n')
+    {
+      if (tcpClient.connected()) {
+        tcpClient.write(gpsBuffer, receivedCharCount);
+        receivedCharCount = 0;
+      }
+    }
+    last_char = curr_char;
   }
   
-  if (receivedCharCount > 0) {
-    if (tcpClient.connected()) {
-      tcpClient.write(gpsBuffer, receivedCharCount-1);
-    }
-    else 
-    {
-      Serial.write(gpsBuffer, receivedCharCount-1);
-      Serial.println();
-      connectToServer();
-    }
+  if (!tcpClient.connected())
+  {
+    connectToServer();
   }
 
   switch (Ethernet.maintain()) {
@@ -128,7 +131,7 @@ void loop() {
       break;
 
     default:
-      delay(500);
+      delay(100);
       break;
   }
 }
